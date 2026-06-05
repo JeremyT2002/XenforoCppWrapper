@@ -81,6 +81,79 @@ if (auth.success && auth.user) {
 }
 ```
 
+## Showing remaining duration
+
+Group membership can only tell you whether an upgrade is **active or not** — it
+has no expiry date. To show the **remaining duration**, you need the `end_date`
+from XenForo's `xf_user_upgrade_active` table, which has no native REST route.
+
+Expose it with a tiny custom add-on endpoint, then read it via
+`get_user_upgrades_detailed()`:
+
+```cpp
+// Returns ActiveUpgrade entries with start_date / end_date populated.
+for (const auto& up : client.get_user_upgrades_detailed(userId)) {
+    // up.active           -> still valid?
+    // up.is_permanent()   -> never expires?
+    // up.remaining_seconds() -> seconds left (0 = expired, -1 = permanent)
+    // up.remaining_human()   -> "12d 3h", "permanent", "expired"
+}
+```
+
+The C++ side expects the endpoint to return either a bare array or
+`{ "upgrades": [ ... ] }`, where each item has `user_upgrade_id`, `title`,
+`start_date` and `end_date` (Unix timestamps; `end_date` of 0/null = permanent).
+
+### Example XenForo add-on endpoint (PHP)
+
+Create an add-on (e.g. `YourVendor/UpgradeApi`) and register an API route
+`users/:int<user_id>/upgrades` pointing to this controller action:
+
+```php
+<?php
+namespace YourVendor\UpgradeApi\Api\Controller;
+
+use XF\Mvc\ParameterBag;
+use XF\Api\Controller\AbstractController;
+
+class UserUpgrade extends AbstractController
+{
+    public function actionGet(ParameterBag $params)
+    {
+        // Requires a super user key (or appropriate permissions).
+        $this->assertApiScopeByRequestMethod('user');
+
+        $userId = (int) $params->user_id;
+
+        $rows = $this->db()->fetchAll(
+            'SELECT uua.user_upgrade_id, uu.title, uua.start_date, uua.end_date
+               FROM xf_user_upgrade_active AS uua
+               JOIN xf_user_upgrade AS uu
+                 ON (uu.user_upgrade_id = uua.user_upgrade_id)
+              WHERE uua.user_id = ?',
+            $userId
+        );
+
+        $upgrades = [];
+        foreach ($rows as $row)
+        {
+            $upgrades[] = [
+                'user_upgrade_id' => (int) $row['user_upgrade_id'],
+                'title'           => $row['title'],
+                'start_date'      => (int) $row['start_date'],
+                'end_date'        => (int) $row['end_date'], // 0 == permanent
+            ];
+        }
+
+        return $this->apiResult(['upgrades' => $upgrades]);
+    }
+}
+```
+
+> Note: this returns currently **active** upgrades. Expired ones are removed
+> from `xf_user_upgrade_active` by XenForo; query `xf_user_upgrade_expired` too
+> if you also want history.
+
 ## Recommended architecture for your app
 
 ```

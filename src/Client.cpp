@@ -1,6 +1,8 @@
 #include "xenforo/Client.hpp"
 
 #include <algorithm>
+#include <ctime>
+#include <string>
 
 namespace xenforo {
 
@@ -63,6 +65,45 @@ bool User::in_group(int group_id) const {
     if (user_group_id == group_id) return true;
     return std::find(secondary_group_ids.begin(), secondary_group_ids.end(),
                      group_id) != secondary_group_ids.end();
+}
+
+namespace {
+int64_t now_or(int64_t now) {
+    return now != 0 ? now : static_cast<int64_t>(std::time(nullptr));
+}
+}  // namespace
+
+int64_t ActiveUpgrade::remaining_seconds(int64_t now) const {
+    if (is_permanent()) return -1;  // no expiry
+    const int64_t diff = end_date - now_or(now);
+    return diff > 0 ? diff : 0;
+}
+
+bool ActiveUpgrade::expired(int64_t now) const {
+    if (is_permanent()) return false;
+    return end_date <= now_or(now);
+}
+
+std::string ActiveUpgrade::remaining_human(int64_t now) const {
+    if (is_permanent()) return "permanent";
+    const int64_t secs = remaining_seconds(now);
+    if (secs <= 0) return "expired";
+
+    const int64_t days = secs / 86400;
+    const int64_t hours = (secs % 86400) / 3600;
+    const int64_t minutes = (secs % 3600) / 60;
+
+    std::string out;
+    if (days > 0) {
+        out += std::to_string(days) + "d";
+        if (hours > 0) out += " " + std::to_string(hours) + "h";
+    } else if (hours > 0) {
+        out += std::to_string(hours) + "h";
+        if (minutes > 0) out += " " + std::to_string(minutes) + "m";
+    } else {
+        out += std::to_string(minutes) + "m";
+    }
+    return out;
 }
 
 // --- Client ----------------------------------------------------------------
@@ -270,6 +311,74 @@ bool Client::has_upgrade(int user_id, int upgrade_id) {
         if (u.upgrade_id == upgrade_id) return u.active;
     }
     return false;
+}
+
+namespace {
+int64_t as_timestamp(const nlohmann::json& j, const char* key) {
+    if (j.contains(key) && !j.at(key).is_null()) {
+        const auto& v = j.at(key);
+        if (v.is_number()) return v.get<int64_t>();
+        if (v.is_string()) {
+            try {
+                return static_cast<int64_t>(std::stoll(v.get<std::string>()));
+            } catch (...) {
+                return 0;
+            }
+        }
+    }
+    return 0;
+}
+
+ActiveUpgrade upgrade_from_json(const nlohmann::json& j) {
+    ActiveUpgrade up;
+    // Accept a few common field names so the custom endpoint stays flexible.
+    if (j.contains("user_upgrade_id")) up.upgrade_id = as_int(j, "user_upgrade_id");
+    else up.upgrade_id = as_int(j, "upgrade_id");
+
+    up.name = as_string(j, "title");
+    if (up.name.empty()) up.name = as_string(j, "name");
+
+    up.start_date = as_timestamp(j, "start_date");
+    up.end_date = as_timestamp(j, "end_date");
+    up.active = !up.expired();
+    return up;
+}
+}  // namespace
+
+std::vector<ActiveUpgrade> Client::get_user_upgrades_detailed(
+    int user_id, const std::string& endpoint_path,
+    std::optional<int> as_user) {
+    // Substitute {user_id} placeholder if present.
+    std::string path = endpoint_path;
+    const std::string placeholder = "{user_id}";
+    const auto pos = path.find(placeholder);
+    if (pos != std::string::npos) {
+        path.replace(pos, placeholder.size(), std::to_string(user_id));
+    }
+
+    Params query;
+    if (path.find(std::to_string(user_id)) == std::string::npos) {
+        // Endpoint expects the id as a query parameter instead of in the path.
+        query.emplace_back("user_id", std::to_string(user_id));
+    }
+
+    const nlohmann::json body = request("GET", path, query, as_user);
+
+    const nlohmann::json* list = nullptr;
+    if (body.is_array()) {
+        list = &body;
+    } else if (body.contains("upgrades") && body.at("upgrades").is_array()) {
+        list = &body.at("upgrades");
+    }
+
+    std::vector<ActiveUpgrade> result;
+    if (list != nullptr) {
+        result.reserve(list->size());
+        for (const auto& item : *list) {
+            if (item.is_object()) result.push_back(upgrade_from_json(item));
+        }
+    }
+    return result;
 }
 
 nlohmann::json Client::get_custom(const std::string& path, const Params& query,

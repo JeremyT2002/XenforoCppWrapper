@@ -52,10 +52,24 @@ int main(int argc, char** argv) {
         std::cout << "Logged in as " << user.username << " (#" << user.user_id
                   << "), state=" << user.user_state << "\n";
 
-        std::cout << "Upgrades:\n";
+        std::cout << "Upgrades (via groups, active/inactive only):\n";
         for (const auto& up : client.get_user_upgrades(user.user_id)) {
             std::cout << "  - " << up.name << ": "
                       << (up.active ? "ACTIVE" : "inactive") << "\n";
+        }
+
+        // Detailed upgrades with remaining duration. Requires a custom add-on
+        // endpoint (see README). Falls back gracefully if it's not installed.
+        try {
+            std::cout << "Upgrades (detailed, with remaining time):\n";
+            for (const auto& up : client.get_user_upgrades_detailed(user.user_id)) {
+                std::cout << "  - " << up.name << ": "
+                          << (up.active ? "ACTIVE" : "expired")
+                          << ", remaining: " << up.remaining_human() << "\n";
+            }
+        } catch (const xenforo::ApiError& e) {
+            std::cout << "  (detailed endpoint unavailable: " << e.what()
+                      << ")\n";
         }
     } catch (const xenforo::ApiError& e) {
         std::cerr << "API error [" << e.status_code << "/" << e.error_code

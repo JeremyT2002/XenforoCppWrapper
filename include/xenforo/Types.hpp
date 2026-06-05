@@ -54,11 +54,31 @@ struct UpgradeDefinition {
 };
 
 // Resolved upgrade state for a user.
+//
+// `start_date` / `end_date` are XenForo Unix timestamps (seconds). They are
+// only populated when the data comes from a custom add-on endpoint that exposes
+// xf_user_upgrade_active records; the group-membership fallback cannot know
+// them and leaves them at 0. An `end_date` of 0 means the upgrade is permanent
+// (never expires).
 struct ActiveUpgrade {
     int upgrade_id = 0;
     std::string name;
     int group_id = 0;
     bool active = false;
+    int64_t start_date = 0;
+    int64_t end_date = 0;              // 0 == permanent
+
+    bool is_permanent() const { return end_date == 0; }
+
+    // Seconds left until expiry relative to `now` (default: current time).
+    // Returns a large sentinel-free value: 0 if expired, and for permanent
+    // upgrades returns -1 to signal "no expiry".
+    int64_t remaining_seconds(int64_t now = 0) const;
+
+    bool expired(int64_t now = 0) const;
+
+    // Human-readable remaining time, e.g. "12d 3h", "permanent" or "expired".
+    std::string remaining_human(int64_t now = 0) const;
 };
 
 }  // namespace xenforo
