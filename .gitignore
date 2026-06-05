@@ -1,0 +1,59 @@
+# Build directories
+build/
+out/
+cmake-build-*/
+_deps/
+
+# CMake artifacts
+CMakeCache.txt
+CMakeFiles/
+CMakeUserPresets.json
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+compile_commands.json
+
+# Compiled object / library / executable files
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.out
+*.app
+*.exp
+*.ilk
+*.pdb
+
+# Visual Studio
+.vs/
+*.vcxproj.user
+*.suo
+*.user
+*.sln.docstates
+Debug/
+Release/
+x64/
+x86/
+
+# vcpkg
+vcpkg_installed/
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Secrets / local config (never commit your API key)
+.env
+.env.local
+*.local
