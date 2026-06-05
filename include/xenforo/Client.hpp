@@ -92,17 +92,16 @@ public:
 
     // Detailed upgrades INCLUDING start/end dates (remaining duration).
     // This requires a custom XenForo add-on endpoint that returns the user's
-    // active upgrade records as JSON. See README ("Showing remaining duration")
-    // for the PHP controller to expose it.
+    // active upgrade records as JSON. The bundled RetteDasCode/UserUpgradeAPI
+    // add-on (see xenforo-addon/) exposes exactly this at the default path.
     //
-    // `endpoint_path` is relative to /api and defaults to a sensible value;
-    // {user_id} in the path is substituted with the given id. The endpoint is
-    // expected to return either:
+    // `endpoint_path` is relative to /api; {user_id} in the path is substituted
+    // with the given id. The endpoint is expected to return either:
     //   { "upgrades": [ { user_upgrade_id, title, start_date, end_date }, ... ] }
     // or a bare array of such objects.
     std::vector<ActiveUpgrade> get_user_upgrades_detailed(
         int user_id,
-        const std::string& endpoint_path = "users/{user_id}/upgrades",
+        const std::string& endpoint_path = "user-upgrades/{user_id}",
         std::optional<int> as_user = std::nullopt);
 
     // Escape hatch for a custom addon endpoint that returns upgrade JSON.

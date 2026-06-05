@@ -1,0 +1,18 @@
+{
+  "title": "User Upgrade API",
+  "description": "Exposes a user's active user upgrades (including start/end dates) through the REST API, for use by external apps such as the XenforoCpp wrapper.",
+  "version_id": 1000070,
+  "version_string": "1.0.0",
+  "dev": "RetteDasCode",
+  "dev_url": "",
+  "discussion_url": "",
+  "faq_url": "",
+  "support_url": "",
+  "extra_files": [],
+  "require": {
+    "XF": [2020070, "XenForo 2.2.0+"]
+  },
+  "require_processed": [],
+  "icon": "fa-user-clock",
+  "legacy_addon_id": ""
+}

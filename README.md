@@ -104,55 +104,23 @@ The C++ side expects the endpoint to return either a bare array or
 `{ "upgrades": [ ... ] }`, where each item has `user_upgrade_id`, `title`,
 `start_date` and `end_date` (Unix timestamps; `end_date` of 0/null = permanent).
 
-### Example XenForo add-on endpoint (PHP)
+### Bundled XenForo add-on
 
-Create an add-on (e.g. `YourVendor/UpgradeApi`) and register an API route
-`users/:int<user_id>/upgrades` pointing to this controller action:
+A ready-to-install add-on that provides exactly this endpoint ships in
+[`xenforo-addon/RetteDasCode/UserUpgradeAPI`](xenforo-addon/RetteDasCode/UserUpgradeAPI/README.md).
+It serves:
 
-```php
-<?php
-namespace YourVendor\UpgradeApi\Api\Controller;
-
-use XF\Mvc\ParameterBag;
-use XF\Api\Controller\AbstractController;
-
-class UserUpgrade extends AbstractController
-{
-    public function actionGet(ParameterBag $params)
-    {
-        // Requires a super user key (or appropriate permissions).
-        $this->assertApiScopeByRequestMethod('user');
-
-        $userId = (int) $params->user_id;
-
-        $rows = $this->db()->fetchAll(
-            'SELECT uua.user_upgrade_id, uu.title, uua.start_date, uua.end_date
-               FROM xf_user_upgrade_active AS uua
-               JOIN xf_user_upgrade AS uu
-                 ON (uu.user_upgrade_id = uua.user_upgrade_id)
-              WHERE uua.user_id = ?',
-            $userId
-        );
-
-        $upgrades = [];
-        foreach ($rows as $row)
-        {
-            $upgrades[] = [
-                'user_upgrade_id' => (int) $row['user_upgrade_id'],
-                'title'           => $row['title'],
-                'start_date'      => (int) $row['start_date'],
-                'end_date'        => (int) $row['end_date'], // 0 == permanent
-            ];
-        }
-
-        return $this->apiResult(['upgrades' => $upgrades]);
-    }
-}
+```
+GET /api/user-upgrades/{user_id}
 ```
 
-> Note: this returns currently **active** upgrades. Expired ones are removed
-> from `xf_user_upgrade_active` by XenForo; query `xf_user_upgrade_expired` too
-> if you also want history.
+which is the default path used by `get_user_upgrades_detailed()`. Copy it into
+your forum's `src/addons/` directory and install it from the Admin Control
+Panel. See its README for details.
+
+> Note: the endpoint returns currently **active** upgrades. Expired ones are
+> moved out of `xf_user_upgrade_active` by XenForo; query
+> `xf_user_upgrade_expired` too if you also want history.
 
 ## Recommended architecture for your app
 
