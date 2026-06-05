@@ -22,19 +22,31 @@ Response:
 ```json
 {
   "user_id": 123,
+  "now": 1719490000,
   "upgrades": [
     {
       "user_upgrade_id": 1,
       "user_upgrade_record_id": 42,
       "title": "Premium",
       "start_date": 1717500000,
-      "end_date": 1720092000
+      "end_date": 1720092000,
+      "is_permanent": false,
+      "expired": false,
+      "remaining_seconds": 602000,
+      "remaining_days": 6,
+      "remaining_human": "6d 23h"
     }
   ]
 }
 ```
 
-`end_date` of `0` means the upgrade is **permanent** (never expires).
+The endpoint computes the remaining duration server-side:
+
+- `end_date` of `0` means the upgrade is **permanent** (never expires).
+- `is_permanent` / `expired` are convenience booleans.
+- `remaining_seconds` / `remaining_days` are `null` for permanent upgrades.
+- `remaining_human` is a ready-to-display string (`"6d 23h"`, `"permanent"`,
+  `"expired"`).
 
 ## File structure
 

@@ -7,9 +7,7 @@
 
 namespace xenforo {
 
-// Thrown when the HTTP transport layer itself fails (DNS, connection, TLS,
-// timeouts, ...). API-level errors (4xx/5xx with a body) are returned as a
-// normal HttpResponse so the caller can inspect status and body.
+// Thrown when the HTTP transport layer itself fails (DNS, TLS, timeouts, ...).
 class TransportError : public std::runtime_error {
 public:
     explicit TransportError(const std::string& message)
@@ -24,13 +22,10 @@ struct HttpResponse {
     bool ok() const { return status_code >= 200 && status_code < 300; }
 };
 
-// A single key/value pair used for x-www-form-urlencoded request bodies and
-// query strings. Values are URL-encoded by the client before sending.
 using Params = std::vector<std::pair<std::string, std::string>>;
 using Headers = std::vector<std::pair<std::string, std::string>>;
 
-// Thin RAII wrapper around libcurl. One instance owns one CURL easy handle and
-// is therefore NOT thread-safe; create one HttpClient per thread.
+// RAII wrapper around libcurl. Not thread-safe; use one instance per thread.
 class HttpClient {
 public:
     HttpClient();
@@ -51,7 +46,6 @@ public:
     HttpResponse del(const std::string& url, const Headers& headers,
                      const Params& query = {});
 
-    // URL-encode a single value using the underlying curl handle.
     std::string url_encode(const std::string& value) const;
 
 private:
@@ -61,7 +55,7 @@ private:
 
     std::string encode_params(const Params& params) const;
 
-    void* curl_ = nullptr;  // CURL*
+    void* curl_ = nullptr;
     bool verify_ssl_ = true;
     long timeout_seconds_ = 30;
 };

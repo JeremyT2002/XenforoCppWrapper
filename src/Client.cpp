@@ -8,7 +8,6 @@ namespace xenforo {
 
 namespace {
 
-// Helpers to read optional/loosely-typed JSON fields without throwing.
 int as_int(const nlohmann::json& j, const char* key, int fallback = 0) {
     if (j.contains(key) && !j.at(key).is_null()) {
         const auto& v = j.at(key);
@@ -260,8 +259,6 @@ User Client::get_user(int user_id) {
 std::optional<User> Client::find_user_by_name(const std::string& username) {
     const nlohmann::json body =
         request("GET", "users/find-name", {{"username", username}});
-    // XF returns either {"exact": {...}} / {"recommendations": [...]} depending
-    // on version; handle the common shapes.
     if (body.contains("exact") && body.at("exact").is_object()) {
         return User::from_json(body.at("exact"));
     }
@@ -331,7 +328,6 @@ int64_t as_timestamp(const nlohmann::json& j, const char* key) {
 
 ActiveUpgrade upgrade_from_json(const nlohmann::json& j) {
     ActiveUpgrade up;
-    // Accept a few common field names so the custom endpoint stays flexible.
     if (j.contains("user_upgrade_id")) up.upgrade_id = as_int(j, "user_upgrade_id");
     else up.upgrade_id = as_int(j, "upgrade_id");
 
@@ -348,7 +344,6 @@ ActiveUpgrade upgrade_from_json(const nlohmann::json& j) {
 std::vector<ActiveUpgrade> Client::get_user_upgrades_detailed(
     int user_id, const std::string& endpoint_path,
     std::optional<int> as_user) {
-    // Substitute {user_id} placeholder if present.
     std::string path = endpoint_path;
     const std::string placeholder = "{user_id}";
     const auto pos = path.find(placeholder);
@@ -358,7 +353,6 @@ std::vector<ActiveUpgrade> Client::get_user_upgrades_detailed(
 
     Params query;
     if (path.find(std::to_string(user_id)) == std::string::npos) {
-        // Endpoint expects the id as a query parameter instead of in the path.
         query.emplace_back("user_id", std::to_string(user_id));
     }
 

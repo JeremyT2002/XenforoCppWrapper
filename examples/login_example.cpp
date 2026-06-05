@@ -1,11 +1,4 @@
-// Example: validate a login against XenForo and check user upgrades.
-//
-// Build (see README) and run with env vars:
-//   XF_URL=https://example.com/community
-//   XF_API_KEY=<super user key>
-//
-// NEVER hard-code your API key or ship it to a client. Keep the super user key
-// on a trusted server only.
+// Run with env vars XF_URL and XF_API_KEY (a super user key).
 
 #include <cstdlib>
 #include <iostream>
@@ -32,10 +25,9 @@ int main(int argc, char** argv) {
 
     xenforo::Client client(config);
 
-    // Map your forum's upgrades to the (hidden) user groups they grant.
     client.set_upgrade_definitions({
-        {/*upgrade_id*/ 1, "Premium", /*group_id*/ 10},
-        {/*upgrade_id*/ 2, "VIP", /*group_id*/ 11},
+        {1, "Premium", 10},  // upgrade_id, name, group_id
+        {2, "VIP", 11},
     });
 
     const std::string login = (argc > 1) ? argv[1] : "testuser";
@@ -58,8 +50,6 @@ int main(int argc, char** argv) {
                       << (up.active ? "ACTIVE" : "inactive") << "\n";
         }
 
-        // Detailed upgrades with remaining duration. Requires a custom add-on
-        // endpoint (see README). Falls back gracefully if it's not installed.
         try {
             std::cout << "Upgrades (detailed, with remaining time):\n";
             for (const auto& up : client.get_user_upgrades_detailed(user.user_id)) {
